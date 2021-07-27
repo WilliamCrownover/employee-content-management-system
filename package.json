@@ -1,0 +1,25 @@
+{
+  "name": "employee-content-management-system",
+  "version": "1.0.0",
+  "description": "A Node.js app using an Inquirer command line CMS for organizing employees into roles and departments stored in a MySQL database.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WilliamCrownover/employee-content-management-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WilliamCrownover/employee-content-management-system/issues"
+  },
+  "homepage": "https://github.com/WilliamCrownover/employee-content-management-system#readme",
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "inquirer": "^8.1.2",
+    "mysql2": "^2.2.5"
+  }
+}
