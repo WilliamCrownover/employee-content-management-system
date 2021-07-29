@@ -41,6 +41,48 @@ const addDepartmentQuestions = [
         }
     }
 ];
+const roleQuestions = [
+    {
+        type: "list",
+        message: "What would you like to do?",
+        name: "action",
+        choices: ["View All Roles","Add A Role"]
+    }
+];
+const addRoleQuestions = [
+    {
+        type: "input",
+        message: "What is the title of the new role?",
+        name: "title",
+        validate: (input) => {
+            if(input !== "") return true;
+            return "Please enter a role title.";
+        }
+    },
+    {
+        type: "input",
+        message: "What is the salary for the new role?",
+        name: "salary",
+        validate: (input) => {
+            if(input !== "" && /\d/.test(input)) return true;
+            return "Please enter a numeric salary.";
+        }
+    }
+];
+
+// View the data on a table with the table name passed in
+const viewAllTable = (table) => {
+    db.query(`SELECT * FROM ${table}`, (err, results) => {
+        
+        if (err) console.log(err);
+      
+        console.log('\n');
+        console.table(results);
+        console.log('\n');
+
+        return askForCategory();
+    });
+}
 
 // Add a department to database
 const addDepartment = () => {
@@ -61,19 +103,6 @@ const addDepartment = () => {
         });
 }
 
-// View the data on a table with the table name passed in
-const viewAllTable = (table) => {
-    db.query(`SELECT * FROM ${table}`, (err, results) => {
-        
-        if (err) console.log(err);
-      
-        console.log('\n');
-        console.table(results);
-        console.log('\n');
-
-        return askForCategory();
-    });
-}
 
 // Ask the user for what action they want to take with departments
 const AskForDepartmentAction = () => {
@@ -92,6 +121,72 @@ const AskForDepartmentAction = () => {
         });
 }
 
+// Takes a message, property name, and object array of names to create a list question
+const constructListQuestion = (message, name, objArray) => {
+    let list = [];
+    
+    objArray.forEach(i => list.push(i.name));
+
+    const question = {
+        type: "list",
+        message: message,
+        name: name,
+        choices: list
+    }
+    
+    return question;
+}
+
+// Add a role to database
+const addRole = () => {
+    db.query('SELECT name FROM department', (err, results) => {
+
+        addRoleQuestions.push(constructListQuestion("Choose a department for this role", "department", results));
+    
+        inquirer
+            .prompt(addRoleQuestions)
+            .then((addRoleAnswers) => {
+
+                const title = addRoleAnswers.title;
+                const salary = addRoleAnswers.salary;
+                const department = addRoleAnswers.department;
+
+                db.query('SELECT id FROM department WHERE name = ?', department, (err, results) => {
+
+                    if (err) console.log(err);
+                    
+                    const department_id = results[0].id;
+
+                    db.query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [title, salary, department_id], (err, results) => {                    
+
+                        if (err) console.log(err);
+                        
+                        console.log(`Added ${title} to the database.`);
+    
+                        return askForCategory();
+                    });    
+                })
+            });
+    })
+}
+
+// Ask the user for what action they want to take with roles
+const AskForRoleAction = () => {
+    inquirer
+        .prompt(roleQuestions)
+        .then((roleAnswer) => {
+
+            switch(roleAnswer.action) {
+
+                case "View All Roles":
+                    return viewAllTable('role');
+
+                case "Add A Role":
+                    return addRole();
+            }
+        });
+}
+
 // Ask the user what category of data they want to work with
 const askForCategory = () => {
     inquirer
@@ -103,8 +198,8 @@ const askForCategory = () => {
                 case "Departments":
                     return AskForDepartmentAction();
 
-                // case "Roles":
-                //     return AskForRoleAction();
+                case "Roles":
+                    return AskForRoleAction();
 
                 // case "Employees":
                 //     return AskForEmployeeAction();
