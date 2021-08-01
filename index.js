@@ -200,7 +200,7 @@ const selectEmployeeTable = async () => {
     }
 }
 
-// View the data on the 'employee' table by department joined with department and role tables 
+// View the data on the 'employee' table by manager joined with department and role tables 
 const selectEmployeeManagerTable = async () => {
     let chooseEmployeeManagerQuestions = [];
 
@@ -249,7 +249,71 @@ const selectEmployeeManagerTable = async () => {
                     WHERE e.manager_id = ?
                     ORDER BY department ASC, salary DESC`, manager); 
                 
-                viewTable(table);
+                if(table.length === 0) {
+                    console.log('\x1b[32m', `This manager has no employees.`, '\x1b[0m');
+                } else {
+                    viewTable(table);
+                }
+    
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
+// View the data on the 'employee' table by department joined with department and role tables 
+const selectEmployeeDepartmentTable = async () => {
+    let chooseEmployeeDepartmentQuestions = [];
+
+    try {
+        const deptTable = await db.query(`
+            SELECT * 
+            FROM department
+            ORDER BY name ASC`); 
+
+        let deptArray = deptTable.map(dept => ({
+            name: dept.name,
+            value: dept.id
+        }));
+
+        chooseEmployeeDepartmentQuestions.push(constructListQuestion("What department's employees would you like to see?", "department", deptArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseEmployeeDepartmentQuestions)
+        .then(async (departmentChoice) => {
+
+            const department = departmentChoice.department;
+
+            try {
+                const table = await db.query(`
+                    SELECT 
+                        e.id, 
+                        CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
+                        title AS 'job title', 
+                        CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
+                        name AS department,
+                        CONCAT(m.first_name, ' ', m.last_name) AS manager 
+                    FROM employee e 
+                    LEFT JOIN employee m 
+                        ON e.manager_id = m.id
+                    JOIN role r 
+                        ON e.role_id = r.id
+                    JOIN department d 
+                        ON r.department_id = d.id
+                    WHERE r.department_id = ?
+                    ORDER BY department ASC, salary DESC`, department);
+                    
+                if(table.length === 0) {
+                    console.log('\x1b[32m', `This department has no employees.`, '\x1b[0m');
+                } else {
+                    viewTable(table);
+                }
 
                 return askForCategory();
 
@@ -447,6 +511,9 @@ const AskForEmployeeAction = () => {
 
                 case "View Employees by Manager":
                     return selectEmployeeManagerTable();
+
+                case "View Employees by Department":
+                    return selectEmployeeDepartmentTable();
 
                 case "Add An Employee":
                     return addEmployee();

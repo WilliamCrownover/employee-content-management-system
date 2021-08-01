@@ -74,6 +74,7 @@ const questions = {
             choices: [
                 "View All Employees",
                 "View Employees by Manager",
+                "View Employees by Department",
                 "Add An Employee",
                 "Update An Employee's Role",
                 "Update An Employee's Manager"
