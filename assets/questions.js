@@ -3,7 +3,7 @@ const questions = {
     category: [
         {
             type: "list",
-            message: "Please select a category to view, add to, or update.",
+            message: "Please select a category to view, add to, update, or delete from.",
             name: "category",
             choices: [
                 "Departments",
@@ -20,7 +20,8 @@ const questions = {
             name: "action",
             choices: [
                 "View All Departments",
-                "Add A Department"
+                "Add A Department",
+                "Delete A Department"
             ]
         }
     ],

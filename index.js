@@ -64,6 +64,48 @@ const addDepartment = () => {
         });
 }
 
+// Remove a department
+const deleteDepartment = async () => {
+    let chooseDepartmentQuestions  = [];
+
+    try {
+        const table = await db.query(`
+            SELECT * 
+            FROM department 
+            ORDER BY name ASC`);
+
+        let deptArray = table.map(dept => ({
+            name: dept.name,
+            value: dept.id
+        }));
+
+        chooseDepartmentQuestions.push(constructListQuestion("Choose a department to delete", "department", deptArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseDepartmentQuestions)
+        .then(async (choosenDepartment) => {
+
+            const department = choosenDepartment.department;
+
+            try {
+                await db.query(`
+                    DELETE FROM department 
+                    WHERE id = ?`, department);
+                    
+                console.log('\x1b[33m', `Deleted department from the database.`, '\x1b[0m');
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
 // Ask the user for what action they want to take with departments
 const AskForDepartmentAction = () => {
     inquirer
@@ -77,6 +119,9 @@ const AskForDepartmentAction = () => {
 
                 case "Add A Department":
                     return addDepartment();
+
+                case "Delete A Department":
+                    return deleteDepartment();
             }
         });
 }
@@ -101,9 +146,9 @@ const selectRoleTable = async () => {
                 CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
                 name AS department 
             FROM role r 
-            JOIN department d 
+            LEFT JOIN department d 
             ON r.department_id = d.id
-            ORDER BY department ASC, salary ASC`); 
+            ORDER BY department ASC, salary*1 ASC`); 
             
         viewTable(table);
 
@@ -185,11 +230,11 @@ const selectEmployeeTable = async () => {
             FROM employee e 
             LEFT JOIN employee m 
                 ON e.manager_id = m.id
-            JOIN role r 
+            LEFT JOIN role r 
                 ON e.role_id = r.id
-            JOIN department d 
+            LEFT JOIN department d 
                 ON r.department_id = d.id
-            ORDER BY department ASC, salary DESC`); 
+            ORDER BY department ASC, salary*1 DESC`); 
         
         viewTable(table);
 
@@ -242,9 +287,9 @@ const selectEmployeeManagerTable = async () => {
                     FROM employee e 
                     LEFT JOIN employee m 
                         ON e.manager_id = m.id
-                    JOIN role r 
+                    LEFT JOIN role r 
                         ON e.role_id = r.id
-                    JOIN department d 
+                    LEFT JOIN department d 
                         ON r.department_id = d.id
                     WHERE e.manager_id = ?
                     ORDER BY department ASC, salary DESC`, manager); 
@@ -302,9 +347,9 @@ const selectEmployeeDepartmentTable = async () => {
                     FROM employee e 
                     LEFT JOIN employee m 
                         ON e.manager_id = m.id
-                    JOIN role r 
+                    LEFT JOIN role r 
                         ON e.role_id = r.id
-                    JOIN department d 
+                    LEFT JOIN department d 
                         ON r.department_id = d.id
                     WHERE r.department_id = ?
                     ORDER BY department ASC, salary DESC`, department);
