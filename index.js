@@ -222,7 +222,7 @@ const addEmployee = () => {
             questions.addEmployee.push(constructListQuestion("Choose a role for this employee", "role", roleArray));
 
             db.query(`
-                SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title, ')') AS name
+                SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
                 FROM employee e
                 JOIN role r 
                     ON e.role_id = r.id    
@@ -266,6 +266,68 @@ const addEmployee = () => {
                                 }
                             );    
                         });
+                }
+            )
+        }
+    )
+}
+
+const updateEmployeeRole = () => {
+    db.query(`        
+        SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+        FROM employee e
+        JOIN role r 
+            ON e.role_id = r.id    
+        ORDER BY name ASC`, 
+        (err, results) => {
+
+            if (err) console.log(err);
+
+            let employeeArray = results.map(employee => ({
+                name: employee.name,
+                value: employee.id
+            }));
+
+            let updateEmployeeQuestions = [];
+
+            updateEmployeeQuestions.push(constructListQuestion("Choose an employee to update thier role", "employee", employeeArray));
+
+            db.query(`
+                SELECT id, title 
+                FROM role
+                ORDER BY title ASC`, 
+                (err, results) => {
+        
+                    if (err) console.log(err);
+        
+                    let roleArray = results.map(role => ({
+                        name: role.title,
+                        value: role.id
+                    }));
+        
+                    updateEmployeeQuestions.push(constructListQuestion("Choose a new role for this employee", "role", roleArray));
+                
+                    inquirer
+                        .prompt(updateEmployeeQuestions)
+                        .then((updateEmployeeAnswers) => {
+
+                            const role_id = updateEmployeeAnswers.role;
+                            const employee_id = updateEmployeeAnswers.employee;
+
+                            db.query(`
+                                UPDATE employee
+                                SET role_id = ?
+                                WHERE id = ?`, [role_id, employee_id],
+                                (err, results) => {
+
+                                    if (err) console.log(err);
+
+                                    console.log('\x1b[32m', `Updated employee's role in the database.`, '\x1b[0m');
+
+                                    return askForCategory();
+                                }
+                            )
+                        })
                 }
             )
         }
