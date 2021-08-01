@@ -79,7 +79,8 @@ const questions = {
                 "View Employees by Department",
                 "Add An Employee",
                 "Update An Employee's Role",
-                "Update An Employee's Manager"
+                "Update An Employee's Manager",
+                "Delete An Employee"
             ]
         }
     ],

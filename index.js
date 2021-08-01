@@ -588,6 +588,50 @@ const updateEmployeeManager = async () => {
         });
 }
 
+// Remove an employee
+const deleteEmployee = async () => {
+    let chooseEmployeeQuestions  = [];
+
+    try {
+        const table = await db.query(`
+            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+            FROM employee e
+            JOIN role r 
+                ON e.role_id = r.id    
+            ORDER BY name ASC`);
+
+        let employeeArray = table.map(employee => ({
+            name: employee.name,
+            value: employee.id
+        }));
+
+        chooseEmployeeQuestions.push(constructListQuestion("Choose an employee to delete", "employee", employeeArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseEmployeeQuestions)
+        .then(async (choosenEmployee) => {
+
+            const employee = choosenEmployee.employee;
+
+            try {
+                await db.query(`
+                    DELETE FROM employee 
+                    WHERE id = ?`, employee);
+                    
+                console.log('\x1b[33m', `Deleted employee from the database.`, '\x1b[0m');
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
 // Ask the user for what action they want to take with employees
 const AskForEmployeeAction = () => {
     inquirer
@@ -613,6 +657,9 @@ const AskForEmployeeAction = () => {
 
                 case "Update An Employee's Manager":
                     return updateEmployeeManager();
+
+                case "Delete An Employee":
+                    return deleteEmployee();
             }
         });
 }
