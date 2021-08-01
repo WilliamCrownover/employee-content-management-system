@@ -2,6 +2,7 @@
 require('dotenv').config();
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+const util = require('util');
 const questions = require('./assets/questions');
 
 // Connect to the employees_db
@@ -14,7 +15,7 @@ const db = mysql.createConnection(
     },
 );
 
-// db.query = util.promisify(db.query);
+db.query = util.promisify(db.query);
 
 // Display the table to the console
 const viewTable = (table) => {
@@ -24,42 +25,42 @@ const viewTable = (table) => {
 }
 
 // View the data on the 'department' table
-const selectDepartmentTable = () => {
-    db.query(`
-        SELECT * 
-        FROM department 
-        ORDER BY name ASC`, 
-        (err, results) => {
-        
-            if (err) console.log(err);
-        
-            viewTable(results);
+const selectDepartmentTable = async () => {
+    try {
+        const table = await db.query(`
+            SELECT * 
+            FROM department 
+            ORDER BY name ASC`);
+    
+        viewTable(table);
 
-            return askForCategory();
-        }
-    );
+        return askForCategory();
+
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 // Add a department to database
 const addDepartment = () => {
     inquirer
         .prompt(questions.addDepartment)
-        .then((addDepartmentAnswer) => {
+        .then(async (addDepartmentAnswer) => {
 
             const deptName = addDepartmentAnswer.name;
-        
-            db.query(`
-                INSERT INTO department (name) 
-                VALUES (?)`, deptName, 
-                (err, results) => {
-                
-                    if (err) console.log(err);
-                    
-                    console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
+            
+            try {
+                await db.query(`
+                    INSERT INTO department (name) 
+                    VALUES (?)`, deptName);
+                                    
+                console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
 
-                    return askForCategory();
-                }
-            );
+                return askForCategory();
+                
+            } catch (err) {
+                console.log(err);
+            }
         });
 }
 
@@ -82,80 +83,75 @@ const AskForDepartmentAction = () => {
 
 // Takes a message, property name, and object array to create a list question
 const constructListQuestion = (message, name, objArray) => {
-
-    const question = {
+    return {
         type: "list",
         message: message,
         name: name,
         choices: objArray
-    }
-    
-    return question;
+    };
 }
 
 // View the data on the 'role' table joined with department table 
-const selectRoleTable = () => {
-    db.query(`
-        SELECT 
-            r.id, 
-            title, 
-            salary, 
-            name AS department 
-        FROM role r 
-        JOIN department d 
-        ON r.department_id = d.id
-        ORDER BY department ASC, salary ASC`, 
-        (err, results) => {
-        
-            if (err) console.log(err);
-        
-            viewTable(results);
+const selectRoleTable = async () => {
+    try {
+        const table = await db.query(`
+            SELECT 
+                r.id, 
+                title, 
+                salary, 
+                name AS department 
+            FROM role r 
+            JOIN department d 
+            ON r.department_id = d.id
+            ORDER BY department ASC, salary ASC`); 
+            
+        viewTable(table);
 
-            return askForCategory();
-        }
-    );
+        return askForCategory();
+
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 // Add a role to database
-const addRole = () => {
-    db.query(`
-        SELECT * 
-        FROM department
-        ORDER BY name ASC`, 
-        (err, results) => {
+const addRole = async () => {
+    try {
+        const deptTable = await db.query(`
+            SELECT * 
+            FROM department
+            ORDER BY name ASC`); 
 
-            if (err) console.log(err);
+        let deptArray = deptTable.map(dept => ({
+            name: dept.name,
+            value: dept.id
+        }));
 
-            let deptArray = results.map(dept => ({
-                name: dept.name,
-                value: dept.id
-            }));
+        questions.addRole.push(constructListQuestion("Choose a department for this role", "department", deptArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
 
-            questions.addRole.push(constructListQuestion("Choose a department for this role", "department", deptArray));
-        
-            inquirer
-                .prompt(questions.addRole)
-                .then((addRoleAnswers) => {
+    inquirer
+        .prompt(questions.addRole)
+        .then(async (addRoleAnswers) => {
 
-                    const title = addRoleAnswers.title;
-                    const salary = addRoleAnswers.salary;
-                    const department = addRoleAnswers.department;
+            const { title, salary, department } = addRoleAnswers;
 
-                    db.query(`
-                        INSERT INTO role (title, salary, department_id) 
-                        VALUES (?, ?, ?)`, [title, salary, department], 
-                        (err, results) => {                    
+            try {
+                await db.query(`
+                    INSERT INTO role (title, salary, department_id) 
+                    VALUES (?, ?, ?)`, [title, salary, department]);
+                    
+                console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
 
-                            if (err) console.log(err);
-                            
-                            console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
+                return askForCategory();
 
-                            return askForCategory();
-                        }
-                    );    
-                });
-        }
-    )
+            } catch (err) {
+                console.log(err);
+            }
+        });    
 }
 
 // Ask the user for what action they want to take with roles
@@ -176,162 +172,158 @@ const AskForRoleAction = () => {
 }
 
 // View the data on the 'employee' table joined with department and role tables 
-const selectEmployeeTable = () => {
-    db.query(`
-        SELECT 
-            e.id, 
-            CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
-            title AS 'job title', 
-            salary, 
-            name AS department,
-            CONCAT(m.first_name, ' ', m.last_name) AS manager 
-        FROM employee e 
-        LEFT JOIN employee m 
-            ON e.manager_id = m.id
-        JOIN role r 
-            ON e.role_id = r.id
-        JOIN department d 
-            ON r.department_id = d.id
-        ORDER BY department ASC, salary DESC`, 
-        (err, results) => {
+const selectEmployeeTable = async () => {
+    try {
+        const table = await db.query(`
+            SELECT 
+                e.id, 
+                CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
+                title AS 'job title', 
+                salary, 
+                name AS department,
+                CONCAT(m.first_name, ' ', m.last_name) AS manager 
+            FROM employee e 
+            LEFT JOIN employee m 
+                ON e.manager_id = m.id
+            JOIN role r 
+                ON e.role_id = r.id
+            JOIN department d 
+                ON r.department_id = d.id
+            ORDER BY department ASC, salary DESC`); 
         
-            if (err) console.log(err);
-        
-            viewTable(results);
+        viewTable(table);
 
-            return askForCategory();
-        }
-    );
+        return askForCategory();
+
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 // Add an employee to database
-const addEmployee = () => {
-    db.query(`
-        SELECT id, title 
-        FROM role
-        ORDER BY title ASC`, 
-        (err, results) => {
+const addEmployee = async () => {
+    try {
+        const roleTable = await db.query(`
+            SELECT id, title 
+            FROM role
+            ORDER BY title ASC`); 
 
-            if (err) console.log(err);
+        let roleArray = roleTable.map(role => ({
+            name: role.title,
+            value: role.id
+        }));
 
-            let roleArray = results.map(role => ({
-                name: role.title,
-                value: role.id
-            }));
+        questions.addEmployee.push(constructListQuestion("Choose a role for this employee", "role", roleArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
 
-            questions.addEmployee.push(constructListQuestion("Choose a role for this employee", "role", roleArray));
+    try {
+        const managerTable = await db.query(`
+            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+            FROM employee e
+            JOIN role r 
+                ON e.role_id = r.id    
+            WHERE manager_id IS NULL
+            ORDER BY name ASC`);
 
-            db.query(`
-                SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-                FROM employee e
-                JOIN role r 
-                    ON e.role_id = r.id    
-                WHERE manager_id IS NULL
-                ORDER BY name ASC`, 
-                (err, results) => {
+        let managerArray = managerTable.map(manager => ({
+            name: manager.name,
+            value: manager.id
+        }));
 
-                    if (err) console.log(err);
+        managerArray.push({
+            name: "No Manager",
+            value: null
+        });
 
-                    let managerArray = results.map(manager => ({
-                        name: manager.name,
-                        value: manager.id
-                    }));
+        questions.addEmployee.push(constructListQuestion("Choose a manager for this employee", "manager", managerArray));
+           
+    } catch (err) {
+        console.log(err);
+    }
 
-                    managerArray.push({
-                        name: "No Manager",
-                        value: null
-                    });
-        
-                    questions.addEmployee.push(constructListQuestion("Choose a manager for this employee", "manager", managerArray));
-                            
-                    inquirer
-                        .prompt(questions.addEmployee)
-                        .then((addEmployeeAnswers) => {
+    inquirer
+        .prompt(questions.addEmployee)
+        .then(async (addEmployeeAnswers) => {
 
-                            const first_name = addEmployeeAnswers.first_name;
-                            const last_name = addEmployeeAnswers.last_name;
-                            const role_id = addEmployeeAnswers.role;
-                            const manager_id = addEmployeeAnswers.manager;
+            const { first_name, last_name, role, manager } = addEmployeeAnswers;
 
-                            db.query(`
-                                INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                                VALUES (?, ?, ?, ?)`, [first_name, last_name, role_id, manager_id], 
-                                (err, results) => {                    
+            try {
+                await db.query(`
+                    INSERT INTO employee (first_name, last_name, role_id, manager_id) 
+                    VALUES (?, ?, ?, ?)`, [first_name, last_name, role, manager]); 
+                    
+                console.log('\x1b[32m', `Added ${first_name} ${last_name} to the database.`, '\x1b[0m');
 
-                                    if (err) console.log(err);
-                                    
-                                    console.log('\x1b[32m', `Added ${first_name} ${last_name} to the database.`, '\x1b[0m');
+                return askForCategory();
 
-                                    return askForCategory();
-                                }
-                            );    
-                        });
-                }
-            )
-        }
-    )
+            } catch (err) {
+                console.log(err);
+            }
+        });    
 }
 
-const updateEmployeeRole = () => {
-    db.query(`        
-        SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-        FROM employee e
-        JOIN role r 
-            ON e.role_id = r.id    
-        ORDER BY name ASC`, 
-        (err, results) => {
+const updateEmployeeRole = async () => {
+    let updateEmployeeQuestions = [];
 
-            if (err) console.log(err);
+    try {
+        const employeeTable = await db.query(`        
+            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+            FROM employee e
+            JOIN role r 
+                ON e.role_id = r.id    
+            ORDER BY title ASC, name ASC`); 
 
-            let employeeArray = results.map(employee => ({
-                name: employee.name,
-                value: employee.id
-            }));
+        let employeeArray = employeeTable.map(employee => ({
+            name: employee.name,
+            value: employee.id
+        }));
 
-            let updateEmployeeQuestions = [];
+        updateEmployeeQuestions.push(constructListQuestion("Choose an employee to update thier role", "employee", employeeArray));
 
-            updateEmployeeQuestions.push(constructListQuestion("Choose an employee to update thier role", "employee", employeeArray));
+    } catch (err) {
+        console.log(err);
+    }
 
-            db.query(`
-                SELECT id, title 
-                FROM role
-                ORDER BY title ASC`, 
-                (err, results) => {
-        
-                    if (err) console.log(err);
-        
-                    let roleArray = results.map(role => ({
-                        name: role.title,
-                        value: role.id
-                    }));
-        
-                    updateEmployeeQuestions.push(constructListQuestion("Choose a new role for this employee", "role", roleArray));
-                
-                    inquirer
-                        .prompt(updateEmployeeQuestions)
-                        .then((updateEmployeeAnswers) => {
+    try {
+        const roleTable = await db.query(`
+            SELECT id, title 
+            FROM role
+            ORDER BY title ASC`); 
+    
+        let roleArray = roleTable.map(role => ({
+            name: role.title,
+            value: role.id
+        }));
 
-                            const role_id = updateEmployeeAnswers.role;
-                            const employee_id = updateEmployeeAnswers.employee;
+        updateEmployeeQuestions.push(constructListQuestion("Choose a new role for this employee", "role", roleArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
 
-                            db.query(`
-                                UPDATE employee
-                                SET role_id = ?
-                                WHERE id = ?`, [role_id, employee_id],
-                                (err, results) => {
+    inquirer
+        .prompt(updateEmployeeQuestions)
+        .then(async (updateEmployeeAnswers) => {
 
-                                    if (err) console.log(err);
+            const { role, employee } = updateEmployeeAnswers;
 
-                                    console.log('\x1b[32m', `Updated employee's role in the database.`, '\x1b[0m');
+            try {
+                await db.query(`
+                    UPDATE employee
+                    SET role_id = ?
+                    WHERE id = ?`, [role, employee]);
 
-                                    return askForCategory();
-                                }
-                            )
-                        })
-                }
-            )
-        }
-    )
+                console.log('\x1b[32m', `Updated employee's role in the database.`, '\x1b[0m');
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
 }
 
 // Ask the user for what action they want to take with employees
