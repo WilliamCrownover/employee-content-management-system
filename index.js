@@ -16,18 +16,28 @@ const db = mysql.createConnection(
 
 // db.query = util.promisify(db.query);
 
-// View the data on a table with the table name passed in
-const viewAllTable = (table) => {
-    db.query(`SELECT * FROM ${table}`, (err, results) => {
-        
-        if (err) console.log(err);
-      
-        console.log('\n');
-        console.table(results);
-        console.log('\n');
+// Display the table to the console
+const viewTable = (table) => {
+    console.log('\n');
+    console.table(table);
+    console.log('\n');
+}
 
-        return askForCategory();
-    });
+// View the data on the 'department' table
+const selectDepartmentTable = () => {
+    db.query(`
+        SELECT * 
+        FROM department 
+        ORDER BY name ASC`, 
+        (err, results) => {
+        
+            if (err) console.log(err);
+        
+            viewTable(results);
+
+            return askForCategory();
+        }
+    );
 }
 
 // Add a department to database
@@ -38,14 +48,18 @@ const addDepartment = () => {
 
             const deptName = addDepartmentAnswer.name;
         
-            db.query('INSERT INTO department (name) VALUES (?)', deptName, (err, results) => {
+            db.query(`
+                INSERT INTO department (name) 
+                VALUES (?)`, deptName, 
+                (err, results) => {
                 
-                if (err) console.log(err);
-                
-                console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
+                    if (err) console.log(err);
+                    
+                    console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
 
-                return askForCategory();
-            });
+                    return askForCategory();
+                }
+            );
         });
 }
 
@@ -58,7 +72,7 @@ const AskForDepartmentAction = () => {
             switch(departmentAnswer.action) {
 
                 case "View All Departments":
-                    return viewAllTable('department');
+                    return selectDepartmentTable();
 
                 case "Add A Department":
                     return addDepartment();
@@ -79,37 +93,68 @@ const constructListQuestion = (message, name, objArray) => {
     return question;
 }
 
+// View the data on the 'role' table joined with department table 
+const selectRoleTable = () => {
+    db.query(`
+        SELECT 
+            r.id, 
+            title, 
+            salary, 
+            name AS department 
+        FROM role r 
+        JOIN department d 
+        ON r.department_id = d.id
+        ORDER BY department ASC, salary ASC`, 
+        (err, results) => {
+        
+            if (err) console.log(err);
+        
+            viewTable(results);
+
+            return askForCategory();
+        }
+    );
+}
+
 // Add a role to database
 const addRole = () => {
-    db.query('SELECT * FROM department', (err, results) => {
+    db.query(`
+        SELECT * 
+        FROM department`, 
+        (err, results) => {
 
-        if (err) console.log(err);
+            if (err) console.log(err);
 
-        let deptArray = results.map(dept => ({
-            name: dept.name,
-            value: dept.id
-        }));
+            let deptArray = results.map(dept => ({
+                name: dept.name,
+                value: dept.id
+            }));
 
-        questions.addRole.push(constructListQuestion("Choose a department for this role", "department", deptArray));
-    
-        inquirer
-            .prompt(questions.addRole)
-            .then((addRoleAnswers) => {
+            questions.addRole.push(constructListQuestion("Choose a department for this role", "department", deptArray));
+        
+            inquirer
+                .prompt(questions.addRole)
+                .then((addRoleAnswers) => {
 
-                const title = addRoleAnswers.title;
-                const salary = addRoleAnswers.salary;
-                const department = addRoleAnswers.department;
+                    const title = addRoleAnswers.title;
+                    const salary = addRoleAnswers.salary;
+                    const department = addRoleAnswers.department;
 
-                db.query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [title, salary, department], (err, results) => {                    
+                    db.query(`
+                        INSERT INTO role (title, salary, department_id) 
+                        VALUES (?, ?, ?)`, [title, salary, department], 
+                        (err, results) => {                    
 
-                    if (err) console.log(err);
-                    
-                    console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
+                            if (err) console.log(err);
+                            
+                            console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
 
-                    return askForCategory();
-                });    
-            });
-    })
+                            return askForCategory();
+                        }
+                    );    
+                });
+        }
+    )
 }
 
 // Ask the user for what action they want to take with roles
@@ -121,7 +166,7 @@ const AskForRoleAction = () => {
             switch(roleAnswer.action) {
 
                 case "View All Roles":
-                    return viewAllTable('role');
+                    return selectRoleTable();
 
                 case "Add A Role":
                     return addRole();

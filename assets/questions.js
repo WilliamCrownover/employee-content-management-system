@@ -50,7 +50,7 @@ const questions = {
             message: "What is the salary for the new role?",
             name: "salary",
             validate: (input) => {
-                if(input !== "" && /\d/.test(input)) return true;
+                if(input !== "" && /^\d+$/.test(input)) return true;
                 return "Please enter a numeric salary.";
             }
         }
