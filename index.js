@@ -98,7 +98,7 @@ const selectRoleTable = async () => {
             SELECT 
                 r.id, 
                 title, 
-                salary, 
+                CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
                 name AS department 
             FROM role r 
             JOIN department d 
@@ -179,7 +179,7 @@ const selectEmployeeTable = async () => {
                 e.id, 
                 CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
                 title AS 'job title', 
-                salary, 
+                CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
                 name AS department,
                 CONCAT(m.first_name, ' ', m.last_name) AS manager 
             FROM employee e 
@@ -198,6 +198,65 @@ const selectEmployeeTable = async () => {
     } catch (err) {
         console.log(err);
     }
+}
+
+// View the data on the 'employee' table by department joined with department and role tables 
+const selectEmployeeManagerTable = async () => {
+    let chooseEmployeeManagerQuestions = [];
+
+    try {
+        const managerTable = await db.query(`        
+            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+            FROM employee e
+            JOIN role r 
+                ON e.role_id = r.id    
+            WHERE manager_id IS NULL
+            ORDER BY name ASC`); 
+
+        let managerArray = managerTable.map(manager => ({
+            name: manager.name,
+            value: manager.id
+        }));
+
+        chooseEmployeeManagerQuestions.push(constructListQuestion("What manager's employees would you like to see?", "manager", managerArray));
+
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseEmployeeManagerQuestions)
+        .then(async (managerChoice) => {
+
+            const manager = managerChoice.manager;
+
+            try {
+                const table = await db.query(`
+                    SELECT 
+                        e.id, 
+                        CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
+                        title AS 'job title', 
+                        CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
+                        name AS department,
+                        CONCAT(m.first_name, ' ', m.last_name) AS manager 
+                    FROM employee e 
+                    LEFT JOIN employee m 
+                        ON e.manager_id = m.id
+                    JOIN role r 
+                        ON e.role_id = r.id
+                    JOIN department d 
+                        ON r.department_id = d.id
+                    WHERE e.manager_id = ?
+                    ORDER BY department ASC, salary DESC`, manager); 
+                
+                viewTable(table);
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
 }
 
 // Add an employee to database
@@ -385,6 +444,9 @@ const AskForEmployeeAction = () => {
 
                 case "View All Employees":
                     return selectEmployeeTable();
+
+                case "View Employees by Manager":
+                    return selectEmployeeManagerTable();
 
                 case "Add An Employee":
                     return addEmployee();

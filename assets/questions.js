@@ -73,6 +73,7 @@ const questions = {
             name: "action",
             choices: [
                 "View All Employees",
+                "View Employees by Manager",
                 "Add An Employee",
                 "Update An Employee's Role",
                 "Update An Employee's Manager"
