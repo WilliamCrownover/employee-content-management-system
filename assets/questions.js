@@ -54,7 +54,16 @@ const questions = {
                 return "Please enter a numeric salary.";
             }
         }
-    ]
+    ],
+    employee: [
+        {
+            type: "list",
+            message: "What would you like to do?",
+            name: "action",
+            choices: ["View All Employees","Add An Employee","Update An Employee's Role"]
+        }
+    ],
+
 }
 
 module.exports = questions;

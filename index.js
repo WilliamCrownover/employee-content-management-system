@@ -174,6 +174,55 @@ const AskForRoleAction = () => {
         });
 }
 
+// View the data on the 'employee' table joined with department and role tables 
+const selectEmployeeTable = () => {
+    db.query(`
+        SELECT 
+            e.id, 
+            CONCAT(e.last_name, ', ', e.first_name) AS 'name (last, first)', 
+            title AS 'job title', 
+            salary, 
+            name AS department,
+            CONCAT(m.last_name, ', ', m.first_name) AS manager 
+        FROM employee e 
+        LEFT JOIN employee m 
+            ON e.manager_id = m.id
+        JOIN role r 
+            ON e.role_id = r.id
+        JOIN department d 
+            ON r.department_id = d.id
+        ORDER BY department ASC, salary DESC`, 
+        (err, results) => {
+        
+            if (err) console.log(err);
+        
+            viewTable(results);
+
+            return askForCategory();
+        }
+    );
+}
+
+// Ask the user for what action they want to take with employees
+const AskForEmployeeAction = () => {
+    inquirer
+        .prompt(questions.employee)
+        .then((employeeAnswer) => {
+
+            switch(employeeAnswer.action) {
+
+                case "View All Employees":
+                    return selectEmployeeTable();
+
+                case "Add An Employee":
+                    return addEmployee();
+
+                case "Update An Employee's Role":
+                    return updateEmployeeRole();
+            }
+        });
+}
+
 // Ask the user what category of data they want to work with
 const askForCategory = () => {
     inquirer
@@ -188,8 +237,8 @@ const askForCategory = () => {
                 case "Roles":
                     return AskForRoleAction();
 
-                // case "Employees":
-                //     return AskForEmployeeAction();
+                case "Employees":
+                    return AskForEmployeeAction();
 
                 case "Quit":
                     console.log('\x1b[34m', 'Goodbye!', '\x1b[0m');
