@@ -265,8 +265,9 @@ const addEmployee = async () => {
         });    
 }
 
+// Updates an employee's role
 const updateEmployeeRole = async () => {
-    let updateEmployeeQuestions = [];
+    let updateEmployeeRoleQuestions = [];
 
     try {
         const employeeTable = await db.query(`        
@@ -281,7 +282,7 @@ const updateEmployeeRole = async () => {
             value: employee.id
         }));
 
-        updateEmployeeQuestions.push(constructListQuestion("Choose an employee to update thier role", "employee", employeeArray));
+        updateEmployeeRoleQuestions.push(constructListQuestion("Choose an employee to update thier role", "employee", employeeArray));
 
     } catch (err) {
         console.log(err);
@@ -298,14 +299,14 @@ const updateEmployeeRole = async () => {
             value: role.id
         }));
 
-        updateEmployeeQuestions.push(constructListQuestion("Choose a new role for this employee", "role", roleArray));
+        updateEmployeeRoleQuestions.push(constructListQuestion("Choose a new role for this employee", "role", roleArray));
     
     } catch (err) {
         console.log(err);
     }
 
     inquirer
-        .prompt(updateEmployeeQuestions)
+        .prompt(updateEmployeeRoleQuestions)
         .then(async (updateEmployeeAnswers) => {
 
             const { role, employee } = updateEmployeeAnswers;
@@ -317,6 +318,54 @@ const updateEmployeeRole = async () => {
                     WHERE id = ?`, [role, employee]);
 
                 console.log('\x1b[32m', `Updated employee's role in the database.`, '\x1b[0m');
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
+// Updates an employee's manager
+const updateEmployeeManager = async () => {
+    let updateEmployeeManagerQuestions = [];
+
+    try {
+        const employeeTable = await db.query(`        
+            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+            FROM employee e
+            JOIN role r 
+                ON e.role_id = r.id    
+            ORDER BY name ASC`); 
+
+        let employeeArray = employeeTable.map(employee => ({
+            name: employee.name,
+            value: employee.id
+        }));
+
+        updateEmployeeManagerQuestions.push(constructListQuestion("Choose an employee to update thier manager", "employee", employeeArray));
+        updateEmployeeManagerQuestions.push(constructListQuestion("Choose a new manager for this employee. (Choosing the same employee sets the manager to no one)", "manager", employeeArray));
+
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(updateEmployeeManagerQuestions)
+        .then(async (updateEmployeeAnswers) => {
+
+            let { manager, employee } = updateEmployeeAnswers;
+
+            if( manager === employee ) manager = null;
+
+            try {
+                await db.query(`
+                    UPDATE employee
+                    SET manager_id = ?
+                    WHERE id = ?`, [manager, employee]);
+
+                console.log('\x1b[32m', `Updated employee's manager in the database.`, '\x1b[0m');
 
                 return askForCategory();
 
@@ -342,6 +391,9 @@ const AskForEmployeeAction = () => {
 
                 case "Update An Employee's Role":
                     return updateEmployeeRole();
+
+                case "Update An Employee's Manager":
+                    return updateEmployeeManager();
             }
         });
 }

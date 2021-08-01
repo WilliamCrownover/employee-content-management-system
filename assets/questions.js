@@ -5,7 +5,12 @@ const questions = {
             type: "list",
             message: "Please select a category to view, add to, or update.",
             name: "category",
-            choices: ["Departments","Roles","Employees","Quit"]
+            choices: [
+                "Departments",
+                "Roles",
+                "Employees",
+                "Quit"
+            ]
         }
     ],
     department: [
@@ -13,7 +18,10 @@ const questions = {
             type: "list",
             message: "What would you like to do?",
             name: "action",
-            choices: ["View All Departments","Add A Department"]
+            choices: [
+                "View All Departments",
+                "Add A Department"
+            ]
         }
     ],
     addDepartment: [
@@ -32,7 +40,10 @@ const questions = {
             type: "list",
             message: "What would you like to do?",
             name: "action",
-            choices: ["View All Roles","Add A Role"]
+            choices: [
+                "View All Roles",
+                "Add A Role"
+            ]
         }
     ],
     addRole: [
@@ -60,7 +71,12 @@ const questions = {
             type: "list",
             message: "What would you like to do?",
             name: "action",
-            choices: ["View All Employees","Add An Employee","Update An Employee's Role"]
+            choices: [
+                "View All Employees",
+                "Add An Employee",
+                "Update An Employee's Role",
+                "Update An Employee's Manager"
+            ]
         }
     ],
     addEmployee: [
