@@ -2,6 +2,7 @@
 require('dotenv').config();
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+const questions = require('./assets/questions');
 
 // Connect to the employees_db
 const db = mysql.createConnection(
@@ -13,62 +14,7 @@ const db = mysql.createConnection(
     },
 );
 
-// Inquirer question arrays
-const categoryQuestions = [
-    {
-        type: "list",
-        message: "Please select a category to view, add to, or update.",
-        name: "category",
-        choices: ["Departments","Roles","Employees","Quit"]
-    }
-];
-const departmentQuestions = [
-    {
-        type: "list",
-        message: "What would you like to do?",
-        name: "action",
-        choices: ["View All Departments","Add A Department"]
-    }
-];
-const addDepartmentQuestions = [
-    {
-        type: "input",
-        message: "What is the name of the new department?",
-        name: "name",
-        validate: (input) => {
-            if(input !== "") return true;
-            return "Please enter a department name.";
-        }
-    }
-];
-const roleQuestions = [
-    {
-        type: "list",
-        message: "What would you like to do?",
-        name: "action",
-        choices: ["View All Roles","Add A Role"]
-    }
-];
-const addRoleQuestions = [
-    {
-        type: "input",
-        message: "What is the title of the new role?",
-        name: "title",
-        validate: (input) => {
-            if(input !== "") return true;
-            return "Please enter a role title.";
-        }
-    },
-    {
-        type: "input",
-        message: "What is the salary for the new role?",
-        name: "salary",
-        validate: (input) => {
-            if(input !== "" && /\d/.test(input)) return true;
-            return "Please enter a numeric salary.";
-        }
-    }
-];
+// db.query = util.promisify(db.query);
 
 // View the data on a table with the table name passed in
 const viewAllTable = (table) => {
@@ -87,7 +33,7 @@ const viewAllTable = (table) => {
 // Add a department to database
 const addDepartment = () => {
     inquirer
-        .prompt(addDepartmentQuestions)
+        .prompt(questions.addDepartment)
         .then((addDepartmentAnswer) => {
 
             const deptName = addDepartmentAnswer.name;
@@ -96,18 +42,17 @@ const addDepartment = () => {
                 
                 if (err) console.log(err);
                 
-                console.log(`Added ${deptName} to the database.`);
+                console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
 
                 return askForCategory();
             });
         });
 }
 
-
 // Ask the user for what action they want to take with departments
 const AskForDepartmentAction = () => {
     inquirer
-        .prompt(departmentQuestions)
+        .prompt(questions.department)
         .then((departmentAnswer) => {
 
             switch(departmentAnswer.action) {
@@ -121,17 +66,14 @@ const AskForDepartmentAction = () => {
         });
 }
 
-// Takes a message, property name, and object array of names to create a list question
+// Takes a message, property name, and object array to create a list question
 const constructListQuestion = (message, name, objArray) => {
-    let list = [];
-    
-    objArray.forEach(i => list.push(i.name));
 
     const question = {
         type: "list",
         message: message,
         name: name,
-        choices: list
+        choices: objArray
     }
     
     return question;
@@ -139,33 +81,33 @@ const constructListQuestion = (message, name, objArray) => {
 
 // Add a role to database
 const addRole = () => {
-    db.query('SELECT name FROM department', (err, results) => {
+    db.query('SELECT * FROM department', (err, results) => {
 
-        addRoleQuestions.push(constructListQuestion("Choose a department for this role", "department", results));
+        if (err) console.log(err);
+
+        let deptArray = results.map(dept => ({
+            name: dept.name,
+            value: dept.id
+        }));
+
+        questions.addRole.push(constructListQuestion("Choose a department for this role", "department", deptArray));
     
         inquirer
-            .prompt(addRoleQuestions)
+            .prompt(questions.addRole)
             .then((addRoleAnswers) => {
 
                 const title = addRoleAnswers.title;
                 const salary = addRoleAnswers.salary;
                 const department = addRoleAnswers.department;
 
-                db.query('SELECT id FROM department WHERE name = ?', department, (err, results) => {
+                db.query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [title, salary, department], (err, results) => {                    
 
                     if (err) console.log(err);
                     
-                    const department_id = results[0].id;
+                    console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
 
-                    db.query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [title, salary, department_id], (err, results) => {                    
-
-                        if (err) console.log(err);
-                        
-                        console.log(`Added ${title} to the database.`);
-    
-                        return askForCategory();
-                    });    
-                })
+                    return askForCategory();
+                });    
             });
     })
 }
@@ -173,7 +115,7 @@ const addRole = () => {
 // Ask the user for what action they want to take with roles
 const AskForRoleAction = () => {
     inquirer
-        .prompt(roleQuestions)
+        .prompt(questions.role)
         .then((roleAnswer) => {
 
             switch(roleAnswer.action) {
@@ -190,7 +132,7 @@ const AskForRoleAction = () => {
 // Ask the user what category of data they want to work with
 const askForCategory = () => {
     inquirer
-        .prompt(categoryQuestions)
+        .prompt(questions.category)
         .then((categoryAnswer) => {
 
             switch(categoryAnswer.category) {
@@ -205,7 +147,8 @@ const askForCategory = () => {
                 //     return AskForEmployeeAction();
 
                 case "Quit":
-                    return process.exit();
+                    console.log('\x1b[34m', 'Goodbye!', '\x1b[0m');
+                    return db.end();
             }
         });
 }
