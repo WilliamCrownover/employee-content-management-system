@@ -120,7 +120,8 @@ const selectRoleTable = () => {
 const addRole = () => {
     db.query(`
         SELECT * 
-        FROM department`, 
+        FROM department
+        ORDER BY name ASC`, 
         (err, results) => {
 
             if (err) console.log(err);
@@ -179,11 +180,11 @@ const selectEmployeeTable = () => {
     db.query(`
         SELECT 
             e.id, 
-            CONCAT(e.last_name, ', ', e.first_name) AS 'name (last, first)', 
+            CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
             title AS 'job title', 
             salary, 
             name AS department,
-            CONCAT(m.last_name, ', ', m.first_name) AS manager 
+            CONCAT(m.first_name, ' ', m.last_name) AS manager 
         FROM employee e 
         LEFT JOIN employee m 
             ON e.manager_id = m.id
@@ -201,6 +202,74 @@ const selectEmployeeTable = () => {
             return askForCategory();
         }
     );
+}
+
+// Add an employee to database
+const addEmployee = () => {
+    db.query(`
+        SELECT id, title 
+        FROM role
+        ORDER BY title ASC`, 
+        (err, results) => {
+
+            if (err) console.log(err);
+
+            let roleArray = results.map(role => ({
+                name: role.title,
+                value: role.id
+            }));
+
+            questions.addEmployee.push(constructListQuestion("Choose a role for this employee", "role", roleArray));
+
+            db.query(`
+                SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title, ')') AS name
+                FROM employee e
+                JOIN role r 
+                    ON e.role_id = r.id    
+                WHERE manager_id IS NULL
+                ORDER BY name ASC`, 
+                (err, results) => {
+
+                    if (err) console.log(err);
+
+                    let managerArray = results.map(manager => ({
+                        name: manager.name,
+                        value: manager.id
+                    }));
+
+                    managerArray.push({
+                        name: "No Manager",
+                        value: null
+                    });
+        
+                    questions.addEmployee.push(constructListQuestion("Choose a manager for this employee", "manager", managerArray));
+                            
+                    inquirer
+                        .prompt(questions.addEmployee)
+                        .then((addEmployeeAnswers) => {
+
+                            const first_name = addEmployeeAnswers.first_name;
+                            const last_name = addEmployeeAnswers.last_name;
+                            const role_id = addEmployeeAnswers.role;
+                            const manager_id = addEmployeeAnswers.manager;
+
+                            db.query(`
+                                INSERT INTO employee (first_name, last_name, role_id, manager_id) 
+                                VALUES (?, ?, ?, ?)`, [first_name, last_name, role_id, manager_id], 
+                                (err, results) => {                    
+
+                                    if (err) console.log(err);
+                                    
+                                    console.log('\x1b[32m', `Added ${first_name} ${last_name} to the database.`, '\x1b[0m');
+
+                                    return askForCategory();
+                                }
+                            );    
+                        });
+                }
+            )
+        }
+    )
 }
 
 // Ask the user for what action they want to take with employees

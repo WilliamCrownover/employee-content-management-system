@@ -63,7 +63,26 @@ const questions = {
             choices: ["View All Employees","Add An Employee","Update An Employee's Role"]
         }
     ],
-
+    addEmployee: [
+        {
+            type: "input",
+            message: "What is the first name of the employee?",
+            name: "first_name",
+            validate: (input) => {
+                if(input !== "" && !(/\d/.test(input))) return true;
+                return "Please enter a first name without numbers.";
+            }
+        },
+        {
+            type: "input",
+            message: "What is the last name of the employee?",
+            name: "last_name",
+            validate: (input) => {
+                if(input !== "" && !(/\d/.test(input))) return true;
+                return "Please enter a last name without numbers.";
+            }
+        },
+    ],
 }
 
 module.exports = questions;
