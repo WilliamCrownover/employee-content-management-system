@@ -199,6 +199,48 @@ const addRole = async () => {
         });    
 }
 
+// Remove a role
+const deleteRole = async () => {
+    let chooseRoleQuestions  = [];
+
+    try {
+        const table = await db.query(`
+            SELECT * 
+            FROM role 
+            ORDER BY title ASC`);
+
+        let roleArray = table.map(role => ({
+            name: role.title,
+            value: role.id
+        }));
+
+        chooseRoleQuestions.push(constructListQuestion("Choose a role to delete", "role", roleArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseRoleQuestions)
+        .then(async (choosenRole) => {
+
+            const role = choosenRole.role;
+
+            try {
+                await db.query(`
+                    DELETE FROM role 
+                    WHERE id = ?`, role);
+                    
+                console.log('\x1b[33m', `Deleted role from the database.`, '\x1b[0m');
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
 // Ask the user for what action they want to take with roles
 const AskForRoleAction = () => {
     inquirer
@@ -212,6 +254,9 @@ const AskForRoleAction = () => {
 
                 case "Add A Role":
                     return addRole();
+
+                case "Delete A Role":
+                    return deleteRole();
             }
         });
 }

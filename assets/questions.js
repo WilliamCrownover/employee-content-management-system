@@ -43,7 +43,8 @@ const questions = {
             name: "action",
             choices: [
                 "View All Roles",
-                "Add A Role"
+                "Add A Role",
+                "Delete A Role"
             ]
         }
     ],
