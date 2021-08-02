@@ -4,6 +4,7 @@ const inquirer = require('inquirer');
 const mysql = require('mysql2');
 const util = require('util');
 const questions = require('./assets/questions');
+const queries = require('./assets/queries');
 
 // Connect to the employees_db
 const db = mysql.createConnection(
@@ -15,6 +16,7 @@ const db = mysql.createConnection(
     },
 );
 
+// Turn database queries into a promise
 db.query = util.promisify(db.query);
 
 // Display the table to the console
@@ -27,10 +29,7 @@ const viewTable = (table) => {
 // View the data on the 'department' table
 const selectDepartmentTable = async () => {
     try {
-        const table = await db.query(`
-            SELECT * 
-            FROM department 
-            ORDER BY name ASC`);
+        const table = await db.query(queries.departments);
     
         viewTable(table);
 
@@ -46,10 +45,7 @@ const selectDepartmentBudgetTable = async () => {
     let chooseDepartmentQuestions  = [];
 
     try {
-        const table = await db.query(`
-            SELECT * 
-            FROM department 
-            ORDER BY name ASC`);
+        const table = await db.query(queries.departments);
 
         let deptArray = table.map(dept => ({
             name: dept.name,
@@ -69,16 +65,7 @@ const selectDepartmentBudgetTable = async () => {
             const department = choosenDepartment.department;
 
             try {
-                const budgetTable = await db.query(`
-                    SELECT 
-                        name AS department,
-                        CONCAT('$', FORMAT(SUM(salary)/1000, 0), ' K') AS 'total budget'
-                    FROM employee e
-                    LEFT JOIN role r 
-                        ON e.role_id = r.id
-                    LEFT JOIN department d 
-                        ON r.department_id = d.id
-                    WHERE d.id = ?`, department);
+                const budgetTable = await db.query(queries.budget, department);
                     
                 if(budgetTable[0].department === null) {
                     console.log('\x1b[32m', `This department has no employees.`, '\x1b[0m');
@@ -103,9 +90,7 @@ const addDepartment = () => {
             const deptName = addDepartmentAnswer.name;
             
             try {
-                await db.query(`
-                    INSERT INTO department (name) 
-                    VALUES (?)`, deptName);
+                await db.query(queries.insertDepartment, deptName);
                                     
                 console.log('\x1b[32m', `Added ${deptName} to the database.`, '\x1b[0m');
 
@@ -122,10 +107,7 @@ const deleteDepartment = async () => {
     let chooseDepartmentQuestions  = [];
 
     try {
-        const table = await db.query(`
-            SELECT * 
-            FROM department 
-            ORDER BY name ASC`);
+        const table = await db.query(queries.departments);
 
         let deptArray = table.map(dept => ({
             name: dept.name,
@@ -145,9 +127,7 @@ const deleteDepartment = async () => {
             const department = choosenDepartment.department;
 
             try {
-                await db.query(`
-                    DELETE FROM department 
-                    WHERE id = ?`, department);
+                await db.query(queries.delete('department'), department);
                     
                 console.log('\x1b[33m', `Deleted department from the database.`, '\x1b[0m');
 
@@ -195,16 +175,7 @@ const constructListQuestion = (message, name, objArray) => {
 // View the data on the 'role' table joined with department table 
 const selectRoleTable = async () => {
     try {
-        const table = await db.query(`
-            SELECT 
-                r.id, 
-                title, 
-                CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
-                name AS department 
-            FROM role r 
-            LEFT JOIN department d 
-            ON r.department_id = d.id
-            ORDER BY department ASC, salary*1 ASC`); 
+        const table = await db.query(queries.roles); 
             
         viewTable(table);
 
@@ -218,10 +189,7 @@ const selectRoleTable = async () => {
 // Add a role to database
 const addRole = async () => {
     try {
-        const deptTable = await db.query(`
-            SELECT * 
-            FROM department
-            ORDER BY name ASC`); 
+        const deptTable = await db.query(queries.departments); 
 
         let deptArray = deptTable.map(dept => ({
             name: dept.name,
@@ -241,9 +209,7 @@ const addRole = async () => {
             const { title, salary, department } = addRoleAnswers;
 
             try {
-                await db.query(`
-                    INSERT INTO role (title, salary, department_id) 
-                    VALUES (?, ?, ?)`, [title, salary, department]);
+                await db.query(queries.insertRole, [title, salary, department]);
                     
                 console.log('\x1b[32m', `Added ${title} to the database.`, '\x1b[0m');
 
@@ -260,10 +226,7 @@ const deleteRole = async () => {
     let chooseRoleQuestions  = [];
 
     try {
-        const table = await db.query(`
-            SELECT * 
-            FROM role 
-            ORDER BY title ASC`);
+        const table = await db.query(queries.roles);
 
         let roleArray = table.map(role => ({
             name: role.title,
@@ -283,9 +246,7 @@ const deleteRole = async () => {
             const role = choosenRole.role;
 
             try {
-                await db.query(`
-                    DELETE FROM role 
-                    WHERE id = ?`, role);
+                await db.query(queries.delete('role'), role);
                     
                 console.log('\x1b[33m', `Deleted role from the database.`, '\x1b[0m');
 
@@ -320,22 +281,7 @@ const AskForRoleAction = () => {
 // View the data on the 'employee' table joined with department and role tables 
 const selectEmployeeTable = async () => {
     try {
-        const table = await db.query(`
-            SELECT 
-                e.id, 
-                CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
-                title AS 'job title', 
-                CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
-                name AS department,
-                CONCAT(m.first_name, ' ', m.last_name) AS manager 
-            FROM employee e 
-            LEFT JOIN employee m 
-                ON e.manager_id = m.id
-            LEFT JOIN role r 
-                ON e.role_id = r.id
-            LEFT JOIN department d 
-                ON r.department_id = d.id
-            ORDER BY department ASC, salary*1 DESC`); 
+        const table = await db.query(queries.employees()); 
         
         viewTable(table);
 
@@ -351,13 +297,7 @@ const selectEmployeeManagerTable = async () => {
     let chooseEmployeeManagerQuestions = [];
 
     try {
-        const managerTable = await db.query(`        
-            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-            FROM employee e
-            JOIN role r 
-                ON e.role_id = r.id    
-            WHERE manager_id IS NULL
-            ORDER BY name ASC`); 
+        const managerTable = await db.query(queries.managers); 
 
         let managerArray = managerTable.map(manager => ({
             name: manager.name,
@@ -377,23 +317,7 @@ const selectEmployeeManagerTable = async () => {
             const manager = managerChoice.manager;
 
             try {
-                const table = await db.query(`
-                    SELECT 
-                        e.id, 
-                        CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
-                        title AS 'job title', 
-                        CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
-                        name AS department,
-                        CONCAT(m.first_name, ' ', m.last_name) AS manager 
-                    FROM employee e 
-                    LEFT JOIN employee m 
-                        ON e.manager_id = m.id
-                    LEFT JOIN role r 
-                        ON e.role_id = r.id
-                    LEFT JOIN department d 
-                        ON r.department_id = d.id
-                    WHERE e.manager_id = ?
-                    ORDER BY department ASC, salary DESC`, manager); 
+                const table = await db.query(queries.employeesByManager(), manager); 
                 
                 if(table.length === 0) {
                     console.log('\x1b[32m', `This manager has no employees.`, '\x1b[0m');
@@ -414,10 +338,7 @@ const selectEmployeeDepartmentTable = async () => {
     let chooseEmployeeDepartmentQuestions = [];
 
     try {
-        const deptTable = await db.query(`
-            SELECT * 
-            FROM department
-            ORDER BY name ASC`); 
+        const deptTable = await db.query(queries.departments); 
 
         let deptArray = deptTable.map(dept => ({
             name: dept.name,
@@ -437,23 +358,7 @@ const selectEmployeeDepartmentTable = async () => {
             const department = departmentChoice.department;
 
             try {
-                const table = await db.query(`
-                    SELECT 
-                        e.id, 
-                        CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
-                        title AS 'job title', 
-                        CONCAT('$', FORMAT(salary/1000, 0), ' K') AS salary, 
-                        name AS department,
-                        CONCAT(m.first_name, ' ', m.last_name) AS manager 
-                    FROM employee e 
-                    LEFT JOIN employee m 
-                        ON e.manager_id = m.id
-                    LEFT JOIN role r 
-                        ON e.role_id = r.id
-                    LEFT JOIN department d 
-                        ON r.department_id = d.id
-                    WHERE r.department_id = ?
-                    ORDER BY department ASC, salary DESC`, department);
+                const table = await db.query(queries.employeesByDepartment(), department);
                     
                 if(table.length === 0) {
                     console.log('\x1b[32m', `This department has no employees.`, '\x1b[0m');
@@ -472,10 +377,7 @@ const selectEmployeeDepartmentTable = async () => {
 // Add an employee to database
 const addEmployee = async () => {
     try {
-        const roleTable = await db.query(`
-            SELECT id, title 
-            FROM role
-            ORDER BY title ASC`); 
+        const roleTable = await db.query(queries.roles); 
 
         let roleArray = roleTable.map(role => ({
             name: role.title,
@@ -489,13 +391,7 @@ const addEmployee = async () => {
     }
 
     try {
-        const managerTable = await db.query(`
-            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-            FROM employee e
-            JOIN role r 
-                ON e.role_id = r.id    
-            WHERE manager_id IS NULL
-            ORDER BY name ASC`);
+        const managerTable = await db.query(queries.managers);
 
         let managerArray = managerTable.map(manager => ({
             name: manager.name,
@@ -520,9 +416,7 @@ const addEmployee = async () => {
             const { first_name, last_name, role, manager } = addEmployeeAnswers;
 
             try {
-                await db.query(`
-                    INSERT INTO employee (first_name, last_name, role_id, manager_id) 
-                    VALUES (?, ?, ?, ?)`, [first_name, last_name, role, manager]); 
+                await db.query(queries.insertEmployee, [first_name, last_name, role, manager]); 
                     
                 console.log('\x1b[32m', `Added ${first_name} ${last_name} to the database.`, '\x1b[0m');
 
@@ -539,12 +433,7 @@ const updateEmployeeRole = async () => {
     let updateEmployeeRoleQuestions = [];
 
     try {
-        const employeeTable = await db.query(`        
-            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-            FROM employee e
-            JOIN role r 
-                ON e.role_id = r.id    
-            ORDER BY title ASC, name ASC`); 
+        const employeeTable = await db.query(queries.employeesByRole); 
 
         let employeeArray = employeeTable.map(employee => ({
             name: employee.name,
@@ -558,10 +447,7 @@ const updateEmployeeRole = async () => {
     }
 
     try {
-        const roleTable = await db.query(`
-            SELECT id, title 
-            FROM role
-            ORDER BY title ASC`); 
+        const roleTable = await db.query(queries.roles); 
     
         let roleArray = roleTable.map(role => ({
             name: role.title,
@@ -581,10 +467,7 @@ const updateEmployeeRole = async () => {
             const { role, employee } = updateEmployeeAnswers;
 
             try {
-                await db.query(`
-                    UPDATE employee
-                    SET role_id = ?
-                    WHERE id = ?`, [role, employee]);
+                await db.query(queries.updateEmployee('role'), [role, employee]);
 
                 console.log('\x1b[32m', `Updated employee's role in the database.`, '\x1b[0m');
 
@@ -601,12 +484,7 @@ const updateEmployeeManager = async () => {
     let updateEmployeeManagerQuestions = [];
 
     try {
-        const employeeTable = await db.query(`        
-            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-            FROM employee e
-            JOIN role r 
-                ON e.role_id = r.id    
-            ORDER BY name ASC`); 
+        const employeeTable = await db.query(queries.employeesByRole); 
 
         let employeeArray = employeeTable.map(employee => ({
             name: employee.name,
@@ -629,10 +507,7 @@ const updateEmployeeManager = async () => {
             if( manager === employee ) manager = null;
 
             try {
-                await db.query(`
-                    UPDATE employee
-                    SET manager_id = ?
-                    WHERE id = ?`, [manager, employee]);
+                await db.query(queries.updateEmployee('manager'), [manager, employee]);
 
                 console.log('\x1b[32m', `Updated employee's manager in the database.`, '\x1b[0m');
 
@@ -649,12 +524,7 @@ const deleteEmployee = async () => {
     let chooseEmployeeQuestions  = [];
 
     try {
-        const table = await db.query(`
-            SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
-            FROM employee e
-            JOIN role r 
-                ON e.role_id = r.id    
-            ORDER BY name ASC`);
+        const table = await db.query(queries.employeesByRole);
 
         let employeeArray = table.map(employee => ({
             name: employee.name,
@@ -674,9 +544,7 @@ const deleteEmployee = async () => {
             const employee = choosenEmployee.employee;
 
             try {
-                await db.query(`
-                    DELETE FROM employee 
-                    WHERE id = ?`, employee);
+                await db.query(queries.delete('employee'), employee);
                     
                 console.log('\x1b[33m', `Deleted employee from the database.`, '\x1b[0m');
 
