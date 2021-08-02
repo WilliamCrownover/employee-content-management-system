@@ -41,6 +41,59 @@ const selectDepartmentTable = async () => {
     }
 }
 
+// Sum a department's budget
+const selectDepartmentBudgetTable = async () => {
+    let chooseDepartmentQuestions  = [];
+
+    try {
+        const table = await db.query(`
+            SELECT * 
+            FROM department 
+            ORDER BY name ASC`);
+
+        let deptArray = table.map(dept => ({
+            name: dept.name,
+            value: dept.id
+        }));
+
+        chooseDepartmentQuestions.push(constructListQuestion("Choose a department to view budget", "department", deptArray));
+    
+    } catch (err) {
+        console.log(err);
+    }
+
+    inquirer
+        .prompt(chooseDepartmentQuestions)
+        .then(async (choosenDepartment) => {
+
+            const department = choosenDepartment.department;
+
+            try {
+                const budgetTable = await db.query(`
+                    SELECT 
+                        name AS department,
+                        CONCAT('$', FORMAT(SUM(salary)/1000, 0), ' K') AS 'total budget'
+                    FROM employee e
+                    LEFT JOIN role r 
+                        ON e.role_id = r.id
+                    LEFT JOIN department d 
+                        ON r.department_id = d.id
+                    WHERE d.id = ?`, department);
+                    
+                if(budgetTable[0].department === null) {
+                    console.log('\x1b[32m', `This department has no employees.`, '\x1b[0m');
+                } else {
+                    viewTable(budgetTable);
+                }
+
+                return askForCategory();
+
+            } catch (err) {
+                console.log(err);
+            }
+        });
+}
+
 // Add a department to database
 const addDepartment = () => {
     inquirer
@@ -116,6 +169,9 @@ const AskForDepartmentAction = () => {
 
                 case "View All Departments":
                     return selectDepartmentTable();
+
+                case "View Department Budget":
+                    return selectDepartmentBudgetTable();
 
                 case "Add A Department":
                     return addDepartment();

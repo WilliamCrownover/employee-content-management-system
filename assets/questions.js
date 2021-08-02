@@ -20,6 +20,7 @@ const questions = {
             name: "action",
             choices: [
                 "View All Departments",
+                "View Department Budget",
                 "Add A Department",
                 "Delete A Department"
             ]
