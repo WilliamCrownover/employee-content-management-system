@@ -13,6 +13,7 @@ const questions = {
             ]
         }
     ],
+
     department: [
         {
             type: "list",
@@ -26,6 +27,7 @@ const questions = {
             ]
         }
     ],
+
     addDepartment: [
         {
             type: "input",
@@ -37,6 +39,7 @@ const questions = {
             }
         }
     ],
+
     role: [
         {
             type: "list",
@@ -49,6 +52,7 @@ const questions = {
             ]
         }
     ],
+
     addRole: [
         {
             type: "input",
@@ -69,6 +73,7 @@ const questions = {
             }
         }
     ],
+
     employee: [
         {
             type: "list",
@@ -85,6 +90,7 @@ const questions = {
             ]
         }
     ],
+    
     addEmployee: [
         {
             type: "input",

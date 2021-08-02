@@ -34,7 +34,7 @@ const queries = {
             name AS department 
         FROM role r 
         LEFT JOIN department d 
-        ON r.department_id = d.id
+            ON r.department_id = d.id
         ORDER BY department ASC, salary*1 ASC`,
 
     insertRole:`
@@ -65,7 +65,9 @@ const queries = {
     },
 
     managers:`        
-        SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+        SELECT 
+            e.id, 
+            CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
         FROM employee e
         JOIN role r 
             ON e.role_id = r.id    
@@ -85,7 +87,9 @@ const queries = {
         VALUES (?, ?, ?, ?)`,
 
     employeesByRole:`        
-        SELECT e.id, CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
+        SELECT 
+            e.id, 
+            CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
         FROM employee e
         JOIN role r 
             ON e.role_id = r.id    

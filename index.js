@@ -140,7 +140,7 @@ const deleteDepartment = async () => {
 }
 
 // Ask the user for what action they want to take with departments
-const AskForDepartmentAction = () => {
+const askForDepartmentAction = () => {
     inquirer
         .prompt(questions.department)
         .then((departmentAnswer) => {
@@ -259,7 +259,7 @@ const deleteRole = async () => {
 }
 
 // Ask the user for what action they want to take with roles
-const AskForRoleAction = () => {
+const askForRoleAction = () => {
     inquirer
         .prompt(questions.role)
         .then((roleAnswer) => {
@@ -557,7 +557,7 @@ const deleteEmployee = async () => {
 }
 
 // Ask the user for what action they want to take with employees
-const AskForEmployeeAction = () => {
+const askForEmployeeAction = () => {
     inquirer
         .prompt(questions.employee)
         .then((employeeAnswer) => {
@@ -597,13 +597,13 @@ const askForCategory = () => {
             switch(categoryAnswer.category) {
 
                 case "Departments":
-                    return AskForDepartmentAction();
+                    return askForDepartmentAction();
 
                 case "Roles":
-                    return AskForRoleAction();
+                    return askForRoleAction();
 
                 case "Employees":
-                    return AskForEmployeeAction();
+                    return askForEmployeeAction();
 
                 case "Quit":
                     console.log('\x1b[34m', 'Goodbye!', '\x1b[0m');
