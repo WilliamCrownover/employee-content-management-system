@@ -1,11 +1,11 @@
 // MySQL Queries
 const queries = {
-    departments: `
+	departments: `
         SELECT * 
         FROM department 
         ORDER BY name ASC`,
-    
-    budget: `
+
+	budget: `
         SELECT 
             name AS department,
             CONCAT('$', FORMAT(SUM(salary)/1000, 0), ' K') AS 'total budget'
@@ -15,18 +15,18 @@ const queries = {
         LEFT JOIN department d 
             ON r.department_id = d.id
         WHERE d.id = ?`,
-    
-    insertDepartment:`
+
+	insertDepartment: `
         INSERT INTO department (name) 
         VALUES (?)`,
 
-    delete: (table) => {
-        return `
+	delete: ( table ) => {
+		return `
             DELETE FROM ${table} 
-            WHERE id = ?`
-    },
+            WHERE id = ?`;
+	},
 
-    roles:`
+	roles: `
         SELECT 
             r.id, 
             title, 
@@ -37,11 +37,11 @@ const queries = {
             ON r.department_id = d.id
         ORDER BY department ASC, salary*1 ASC`,
 
-    insertRole:`
+	insertRole: `
         INSERT INTO role (title, salary, department_id) 
         VALUES (?, ?, ?)`,
 
-    employeeStart:`
+	employeeStart: `
         SELECT 
             e.id, 
             CONCAT(e.first_name, ' ', e.last_name) AS 'full name', 
@@ -57,14 +57,14 @@ const queries = {
         LEFT JOIN department d 
             ON r.department_id = d.id`,
 
-    employeeOrder:`
+	employeeOrder: `
         ORDER BY department ASC, salary*1 DESC`,
 
-    employees: function() { 
-        return `${this.employeeStart} ${this.employeeOrder}`
-    },
+	employees: function() {
+		return `${this.employeeStart} ${this.employeeOrder}`;
+	},
 
-    managers:`        
+	managers: `        
         SELECT 
             e.id, 
             CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
@@ -74,19 +74,19 @@ const queries = {
         WHERE manager_id IS NULL
         ORDER BY name ASC`,
 
-    employeesByManager: function() { 
-        return `${this.employeeStart} WHERE e.manager_id = ? ${this.employeeOrder}`
-    },
+	employeesByManager: function() {
+		return `${this.employeeStart} WHERE e.manager_id = ? ${this.employeeOrder}`;
+	},
 
-    employeesByDepartment: function() { 
-        return `${this.employeeStart} WHERE r.department_id = ? ${this.employeeOrder}`
-    },
+	employeesByDepartment: function() {
+		return `${this.employeeStart} WHERE r.department_id = ? ${this.employeeOrder}`;
+	},
 
-    insertEmployee:`
+	insertEmployee: `
         INSERT INTO employee (first_name, last_name, role_id, manager_id) 
         VALUES (?, ?, ?, ?)`,
 
-    employeesByRole:`        
+	employeesByRole: `        
         SELECT 
             e.id, 
             CONCAT(first_name, ' ', last_name, ' TITLE ', title) AS name
@@ -95,12 +95,12 @@ const queries = {
             ON e.role_id = r.id    
         ORDER BY title ASC, name ASC`,
 
-    updateEmployee: (data) => {
-        return `
+	updateEmployee: ( data ) => {
+		return `
             UPDATE employee
             SET ${data}_id = ?
-            WHERE id = ?`
-    }
-}
+            WHERE id = ?`;
+	}
+};
 
 module.exports = queries;
